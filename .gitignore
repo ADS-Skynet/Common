@@ -32,20 +32,21 @@ ENV/
 *.swo
 *~
 .DS_Store
+# Keep .vscode/ for Dev Container settings
 
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Simulation specific
+# PyTorch
+*.pth
+*.pt
+
+# Data
+lane_detection/data/raw/
+lane_detection/data/processed/
+lane_detection/data/models/*.pth
 *.mp4
 *.avi
-*.mkv
-recordings/
-output/
-
-# CARLA specific
-carla_data/
-_out/
 
 # Logs
 *.log

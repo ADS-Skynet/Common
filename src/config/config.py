@@ -120,6 +120,7 @@ class StreamingConfig:
     Centralizes streaming parameters used across modules.
     """
     jpeg_quality: int = 85                # JPEG compression quality (0-100)
+    raw_rgb: bool = False                 # Send raw RGB instead of JPEG (faster for localhost)
     web_viewer_fps: int = 30              # Web viewer target FPS
     stream_frame_delay_ms: int = 33       # Frame delay for streaming (~30fps)
     broadcast_log_interval: int = 100     # Log every N frames
@@ -515,6 +516,7 @@ class ConfigManager:
                 stream_data = data['streaming']
                 streaming_cfg = StreamingConfig(
                     jpeg_quality=stream_data.get('jpeg_quality', streaming_cfg.jpeg_quality),
+                    raw_rgb=stream_data.get('raw_rgb', streaming_cfg.raw_rgb),
                     web_viewer_fps=stream_data.get('web_viewer_fps', streaming_cfg.web_viewer_fps),
                     stream_frame_delay_ms=stream_data.get('stream_frame_delay_ms', streaming_cfg.stream_frame_delay_ms),
                     broadcast_log_interval=stream_data.get('broadcast_log_interval', streaming_cfg.broadcast_log_interval),

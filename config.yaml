@@ -99,7 +99,7 @@ lane_analyzer:
 # Throttle Control Policy
 # Adaptive throttle reduces speed during sharp turns
 throttle_policy:
-  base: 0.14              # Base throttle when steering is minimal
+  base: 0.10              # Base throttle when steering is minimal
   min: 0.05               # Minimum throttle during sharp turns
   steer_threshold: 0.15   # Steering magnitude to start reducing throttle
   steer_max: 0.70         # Maximum expected steering magnitude
@@ -143,9 +143,10 @@ timing:
 
 # Video Streaming and Compression
 streaming:
-  jpeg_quality: 85                # JPEG compression quality (0-100)
-  web_viewer_fps: 30              # Web viewer target FPS
-  stream_frame_delay_ms: 33       # Frame delay for streaming (~30fps)
+  jpeg_quality: 100               # JPEG compression quality (0-100)
+  raw_rgb: true                   # Send raw RGB instead of JPEG (faster for localhost, 10x larger)
+  web_viewer_fps: 60              # Web viewer target FPS
+  stream_frame_delay_ms: 15       # Frame delay for streaming (~60fps)
   broadcast_log_interval: 100     # Log every N frames
 
 # Process Launcher

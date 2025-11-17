@@ -333,12 +333,21 @@ class ViewerSubscriber:
 
             if topic == 'frame':
                 metadata = json.loads(parts[1].decode('utf-8'))
-                jpeg_data = parts[2]
+                frame_data = parts[2]
 
-                # Decode JPEG
-                image_array = np.frombuffer(jpeg_data, dtype=np.uint8)
-                image_bgr = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-                image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+                # Check format (default to jpeg for backward compatibility)
+                frame_format = metadata.get('format', 'jpeg')
+
+                if frame_format == 'raw_rgb':
+                    # Decode raw RGB data
+                    width = metadata['width']
+                    height = metadata['height']
+                    image_rgb = np.frombuffer(frame_data, dtype=np.uint8).reshape((height, width, 3))
+                else:
+                    # Decode JPEG
+                    image_array = np.frombuffer(frame_data, dtype=np.uint8)
+                    image_bgr = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+                    image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
 
                 self.latest_frame = image_rgb
                 self.frame_count += 1

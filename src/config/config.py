@@ -32,6 +32,21 @@ DEFAULT_CONFIG_PATH = get_project_root() / "config.yaml"
 
 
 @dataclass
+class ZMQSocketConfig:
+    """
+    ZMQ socket-level configuration.
+
+    Centralizes socket options that were hardcoded across multiple modules.
+    """
+    send_hwm: int = 10                    # SNDHWM - Send high water mark
+    recv_hwm: int = 10                    # RCVHWM - Receive high water mark
+    recv_timeout_ms: int = 100            # RCVTIMEO - Standard receive timeout
+    param_recv_timeout_ms: int = 10       # RCVTIMEO for parameter updates (faster)
+    linger_ms: int = 0                    # LINGER - Time to wait on close
+    connection_delay_s: float = 0.1       # Delay after connection (slow-joiner fix)
+
+
+@dataclass
 class CommunicationConfig:
     """
     Inter-process communication configuration.
@@ -44,13 +59,21 @@ class CommunicationConfig:
     detection_shm_name: str = "detection_results"
     control_shm_name: str = "control_commands"
 
-    # ZMQ Ports
+    # ZMQ Base Ports
     zmq_broadcast_port: int = 5557      # Simulation -> Viewer (frame/detection/state)
     zmq_action_port: int = 5558         # Viewer -> Simulation (action commands)
     zmq_parameter_port: int = 5559      # Parameter updates
 
+    # ZMQ Broker Derived Ports (used by LKAS broker)
+    zmq_param_servers_port: int = 5560     # Parameter forwarding to servers
+    zmq_action_forward_port: int = 5561    # Action forwarding to simulation
+    zmq_vehicle_status_port: int = 5562    # Vehicle status broadcasting
+
     # Default hosts
     zmq_broadcast_host: str = "localhost"
+
+    # Socket configuration
+    zmq_socket: ZMQSocketConfig = field(default_factory=ZMQSocketConfig)
 
 
 @dataclass
@@ -63,10 +86,81 @@ class CARLAConfig:
 
 
 @dataclass
+class RetryConfig:
+    """
+    Connection retry configuration.
+
+    Centralizes retry parameters that were inconsistent across modules.
+    """
+    max_retries: int = 20                 # Standard retry count
+    retry_delay_s: float = 0.5            # Standard retry delay
+    extended_max_retries: int = 30        # For shared memory initialization
+    extended_retry_delay_s: float = 1.0   # Extended retry delay
+
+
+@dataclass
+class TimingConfig:
+    """
+    System timing configuration.
+
+    Centralizes timing parameters used across modules.
+    """
+    main_loop_sleep_s: float = 0.01       # Main loop sleep interval
+    post_decision_delay_s: float = 0.5    # Delay after decision making
+    pause_sleep_s: float = 0.1            # Sleep during pause state
+    busy_wait_sleep_s: float = 0.001      # Shared memory busy-wait interval
+    warmup_duration_s: float = 2.5        # System warmup duration
+
+
+@dataclass
+class StreamingConfig:
+    """
+    Video streaming and compression configuration.
+
+    Centralizes streaming parameters used across modules.
+    """
+    jpeg_quality: int = 85                # JPEG compression quality (0-100)
+    web_viewer_fps: int = 30              # Web viewer target FPS
+    stream_frame_delay_ms: int = 33       # Frame delay for streaming (~30fps)
+    broadcast_log_interval: int = 100     # Log every N frames
+
+
+@dataclass
+class LauncherConfig:
+    """
+    Process launcher configuration.
+
+    Centralizes process management parameters.
+    """
+    decision_init_timeout_s: float = 3.0   # Decision process init timeout
+    detection_init_timeout_s: float = 4.0  # Detection process init timeout
+    process_stop_timeout_s: float = 5.0    # Process termination timeout
+    terminal_width: int = 70               # Terminal output width
+    subprocess_prefix: str = "[SubProc]"   # Subprocess log prefix
+    log_file: str = "lkas_run.log"         # Default log file name
+    buffer_read_size: int = 4096           # Subprocess output buffer size
+
+
+@dataclass
+class ControlLimitsConfig:
+    """
+    Control signal limits.
+
+    Defines bounds for steering, throttle, and brake signals.
+    """
+    max_steering: float = 1.0              # Maximum steering angle (normalized)
+    min_steering: float = -1.0             # Minimum steering angle (normalized)
+    max_throttle: float = 1.0              # Maximum throttle
+    min_throttle: float = 0.0              # Minimum throttle
+    max_brake: float = 1.0                 # Maximum brake
+    min_brake: float = 0.0                 # Minimum brake
+
+
+@dataclass
 class CameraConfig:
     """Camera sensor configuration."""
-    width: int = 800
-    height: int = 600
+    width: int = 640
+    height: int = 480
     fov: float = 90.0
     position: Tuple[float, float, float] = (2.0, 0.0, 1.5)  # x, y, z
     rotation: Tuple[float, float, float] = (-10.0, 0.0, 0.0)  # pitch, yaw, roll
@@ -167,6 +261,11 @@ class Config:
     controller: ControllerConfig = field(default_factory=ControllerConfig)
     throttle_policy: ThrottlePolicyConfig = field(default_factory=ThrottlePolicyConfig)
     visualization: VisualizationConfig = field(default_factory=VisualizationConfig)
+    retry: RetryConfig = field(default_factory=RetryConfig)
+    timing: TimingConfig = field(default_factory=TimingConfig)
+    streaming: StreamingConfig = field(default_factory=StreamingConfig)
+    launcher: LauncherConfig = field(default_factory=LauncherConfig)
+    control_limits: ControlLimitsConfig = field(default_factory=ControlLimitsConfig)
 
     # General settings
     detection_method: str = "cv"  # 'cv' or 'dl'
@@ -226,6 +325,20 @@ class ConfigManager:
             comm_cfg = CommunicationConfig()
             if 'communication' in data:
                 comm_data = data['communication']
+
+                # Parse ZMQ socket config if present
+                zmq_socket_cfg = ZMQSocketConfig()
+                if 'zmq_socket' in comm_data:
+                    sock_data = comm_data['zmq_socket']
+                    zmq_socket_cfg = ZMQSocketConfig(
+                        send_hwm=sock_data.get('send_hwm', zmq_socket_cfg.send_hwm),
+                        recv_hwm=sock_data.get('recv_hwm', zmq_socket_cfg.recv_hwm),
+                        recv_timeout_ms=sock_data.get('recv_timeout_ms', zmq_socket_cfg.recv_timeout_ms),
+                        param_recv_timeout_ms=sock_data.get('param_recv_timeout_ms', zmq_socket_cfg.param_recv_timeout_ms),
+                        linger_ms=sock_data.get('linger_ms', zmq_socket_cfg.linger_ms),
+                        connection_delay_s=sock_data.get('connection_delay_s', zmq_socket_cfg.connection_delay_s),
+                    )
+
                 comm_cfg = CommunicationConfig(
                     image_shm_name=comm_data.get('image_shm_name', comm_cfg.image_shm_name),
                     detection_shm_name=comm_data.get('detection_shm_name', comm_cfg.detection_shm_name),
@@ -233,7 +346,11 @@ class ConfigManager:
                     zmq_broadcast_port=comm_data.get('zmq_broadcast_port', comm_cfg.zmq_broadcast_port),
                     zmq_action_port=comm_data.get('zmq_action_port', comm_cfg.zmq_action_port),
                     zmq_parameter_port=comm_data.get('zmq_parameter_port', comm_cfg.zmq_parameter_port),
+                    zmq_param_servers_port=comm_data.get('zmq_param_servers_port', comm_cfg.zmq_param_servers_port),
+                    zmq_action_forward_port=comm_data.get('zmq_action_forward_port', comm_cfg.zmq_action_forward_port),
+                    zmq_vehicle_status_port=comm_data.get('zmq_vehicle_status_port', comm_cfg.zmq_vehicle_status_port),
                     zmq_broadcast_host=comm_data.get('zmq_broadcast_host', comm_cfg.zmq_broadcast_host),
+                    zmq_socket=zmq_socket_cfg,
                 )
 
             # Parse CARLA config
@@ -369,6 +486,67 @@ class ConfigManager:
                     hud_margin=viz_data.get('hud_margin', viz_cfg.hud_margin),
                 )
 
+            # Parse retry config
+            retry_cfg = RetryConfig()
+            if 'retry' in data:
+                retry_data = data['retry']
+                retry_cfg = RetryConfig(
+                    max_retries=retry_data.get('max_retries', retry_cfg.max_retries),
+                    retry_delay_s=retry_data.get('retry_delay_s', retry_cfg.retry_delay_s),
+                    extended_max_retries=retry_data.get('extended_max_retries', retry_cfg.extended_max_retries),
+                    extended_retry_delay_s=retry_data.get('extended_retry_delay_s', retry_cfg.extended_retry_delay_s),
+                )
+
+            # Parse timing config
+            timing_cfg = TimingConfig()
+            if 'timing' in data:
+                timing_data = data['timing']
+                timing_cfg = TimingConfig(
+                    main_loop_sleep_s=timing_data.get('main_loop_sleep_s', timing_cfg.main_loop_sleep_s),
+                    post_decision_delay_s=timing_data.get('post_decision_delay_s', timing_cfg.post_decision_delay_s),
+                    pause_sleep_s=timing_data.get('pause_sleep_s', timing_cfg.pause_sleep_s),
+                    busy_wait_sleep_s=timing_data.get('busy_wait_sleep_s', timing_cfg.busy_wait_sleep_s),
+                    warmup_duration_s=timing_data.get('warmup_duration_s', timing_cfg.warmup_duration_s),
+                )
+
+            # Parse streaming config
+            streaming_cfg = StreamingConfig()
+            if 'streaming' in data:
+                stream_data = data['streaming']
+                streaming_cfg = StreamingConfig(
+                    jpeg_quality=stream_data.get('jpeg_quality', streaming_cfg.jpeg_quality),
+                    web_viewer_fps=stream_data.get('web_viewer_fps', streaming_cfg.web_viewer_fps),
+                    stream_frame_delay_ms=stream_data.get('stream_frame_delay_ms', streaming_cfg.stream_frame_delay_ms),
+                    broadcast_log_interval=stream_data.get('broadcast_log_interval', streaming_cfg.broadcast_log_interval),
+                )
+
+            # Parse launcher config
+            launcher_cfg = LauncherConfig()
+            if 'launcher' in data:
+                launcher_data = data['launcher']
+                launcher_cfg = LauncherConfig(
+                    decision_init_timeout_s=launcher_data.get('decision_init_timeout_s', launcher_cfg.decision_init_timeout_s),
+                    detection_init_timeout_s=launcher_data.get('detection_init_timeout_s', launcher_cfg.detection_init_timeout_s),
+                    process_stop_timeout_s=launcher_data.get('process_stop_timeout_s', launcher_cfg.process_stop_timeout_s),
+                    terminal_width=launcher_data.get('terminal_width', launcher_cfg.terminal_width),
+                    subprocess_prefix=launcher_data.get('subprocess_prefix', launcher_cfg.subprocess_prefix),
+                    log_file=launcher_data.get('log_file', launcher_cfg.log_file),
+                    buffer_read_size=launcher_data.get('buffer_read_size', launcher_cfg.buffer_read_size),
+                )
+
+            # Parse control limits config
+            control_limits_cfg = ControlLimitsConfig()
+            if 'control_limits' in data:
+                limits_data = data['control_limits']
+                control_limits_cfg = ControlLimitsConfig(
+                    max_steering=limits_data.get('max_steering', control_limits_cfg.max_steering),
+                    min_steering=limits_data.get('min_steering', control_limits_cfg.min_steering),
+                    max_throttle=limits_data.get('max_throttle', control_limits_cfg.max_throttle),
+                    min_throttle=limits_data.get('min_throttle', control_limits_cfg.min_throttle),
+                    max_brake=limits_data.get('max_brake', control_limits_cfg.max_brake),
+                    min_brake=limits_data.get('min_brake', control_limits_cfg.min_brake),
+                )
+
             # Parse detection method from system section
             detection_method = "cv"
             if 'system' in data:
@@ -385,6 +563,11 @@ class ConfigManager:
                 controller=controller_cfg,
                 throttle_policy=throttle_cfg,
                 visualization=viz_cfg,
+                retry=retry_cfg,
+                timing=timing_cfg,
+                streaming=streaming_cfg,
+                launcher=launcher_cfg,
+                control_limits=control_limits_cfg,
                 detection_method=detection_method,
             )
 
@@ -420,7 +603,18 @@ class ConfigManager:
                     'zmq_broadcast_port': config.communication.zmq_broadcast_port,
                     'zmq_action_port': config.communication.zmq_action_port,
                     'zmq_parameter_port': config.communication.zmq_parameter_port,
+                    'zmq_param_servers_port': config.communication.zmq_param_servers_port,
+                    'zmq_action_forward_port': config.communication.zmq_action_forward_port,
+                    'zmq_vehicle_status_port': config.communication.zmq_vehicle_status_port,
                     'zmq_broadcast_host': config.communication.zmq_broadcast_host,
+                    'zmq_socket': {
+                        'send_hwm': config.communication.zmq_socket.send_hwm,
+                        'recv_hwm': config.communication.zmq_socket.recv_hwm,
+                        'recv_timeout_ms': config.communication.zmq_socket.recv_timeout_ms,
+                        'param_recv_timeout_ms': config.communication.zmq_socket.param_recv_timeout_ms,
+                        'linger_ms': config.communication.zmq_socket.linger_ms,
+                        'connection_delay_s': config.communication.zmq_socket.connection_delay_s,
+                    },
                 },
                 'carla': {
                     'host': config.carla.host,
@@ -492,6 +686,42 @@ class ConfigManager:
                     'hud_font_scale': config.visualization.hud_font_scale,
                     'hud_thickness': config.visualization.hud_thickness,
                     'hud_margin': config.visualization.hud_margin,
+                },
+                'retry': {
+                    'max_retries': config.retry.max_retries,
+                    'retry_delay_s': config.retry.retry_delay_s,
+                    'extended_max_retries': config.retry.extended_max_retries,
+                    'extended_retry_delay_s': config.retry.extended_retry_delay_s,
+                },
+                'timing': {
+                    'main_loop_sleep_s': config.timing.main_loop_sleep_s,
+                    'post_decision_delay_s': config.timing.post_decision_delay_s,
+                    'pause_sleep_s': config.timing.pause_sleep_s,
+                    'busy_wait_sleep_s': config.timing.busy_wait_sleep_s,
+                    'warmup_duration_s': config.timing.warmup_duration_s,
+                },
+                'streaming': {
+                    'jpeg_quality': config.streaming.jpeg_quality,
+                    'web_viewer_fps': config.streaming.web_viewer_fps,
+                    'stream_frame_delay_ms': config.streaming.stream_frame_delay_ms,
+                    'broadcast_log_interval': config.streaming.broadcast_log_interval,
+                },
+                'launcher': {
+                    'decision_init_timeout_s': config.launcher.decision_init_timeout_s,
+                    'detection_init_timeout_s': config.launcher.detection_init_timeout_s,
+                    'process_stop_timeout_s': config.launcher.process_stop_timeout_s,
+                    'terminal_width': config.launcher.terminal_width,
+                    'subprocess_prefix': config.launcher.subprocess_prefix,
+                    'log_file': config.launcher.log_file,
+                    'buffer_read_size': config.launcher.buffer_read_size,
+                },
+                'control_limits': {
+                    'max_steering': config.control_limits.max_steering,
+                    'min_steering': config.control_limits.min_steering,
+                    'max_throttle': config.control_limits.max_throttle,
+                    'min_throttle': config.control_limits.min_throttle,
+                    'max_brake': config.control_limits.max_brake,
+                    'min_brake': config.control_limits.min_brake,
                 },
                 'system': {
                     'detection_method': config.detection_method,

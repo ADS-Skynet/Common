@@ -212,6 +212,7 @@ class ViewerSubscriber:
         self.socket.setsockopt(zmq.SUBSCRIBE, b'frame')
         self.socket.setsockopt(zmq.SUBSCRIBE, b'detection')
         self.socket.setsockopt(zmq.SUBSCRIBE, b'state')
+        self.socket.setsockopt(zmq.SUBSCRIBE, b'vehicle_status')  # Also subscribe to vehicle_status (real vehicle)
 
         # Non-blocking receive (don't wait if no data)
         self.socket.setsockopt(zmq.RCVTIMEO, 100)  # 100ms timeout
@@ -365,9 +366,13 @@ class ViewerSubscriber:
                 if self.detection_callback:
                     self.detection_callback(detection)
 
-            elif topic == 'state':
+            elif topic == 'state' or topic == 'vehicle_status':
                 data = json.loads(parts[1].decode('utf-8'))
-                state = VehicleState(**data)
+                # Handle both simulation (VehicleState) and real vehicle (dict with similar fields)
+                # Filter out keys that VehicleState doesn't expect
+                valid_keys = {'steering', 'throttle', 'brake', 'speed_kmh', 'position', 'rotation', 'paused'}
+                filtered_data = {k: v for k, v in data.items() if k in valid_keys}
+                state = VehicleState(**filtered_data)
                 self.latest_state = state
                 self.state_received = True
 

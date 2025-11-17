@@ -30,6 +30,9 @@ dependencies = [
 
     # Rich terminal UI (for ViewerSubscriber footer)
     "rich>=13.0.0,<14.0.0",
+
+    # Configuration management
+    "PyYAML>=6.0.0,<7.0.0",
 ]
 
 # Optional dependency groups
@@ -54,6 +57,7 @@ packages = [
     "skynet_common.types",
     "skynet_common.communication",
     "skynet_common.visualization",
+    "skynet_common.config",
 ]
 
 [tool.setuptools.package-data]

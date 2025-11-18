@@ -208,9 +208,11 @@ class AnalyzerConfig:
 
 @dataclass
 class ControllerConfig:
-    """PD controller parameters."""
-    kp: float = 0.5  # Proportional gain
-    kd: float = 0.1  # Derivative gain
+    """Controller parameters (PD/PID)."""
+    method: str = "pid"  # Controller type: "pd" or "pid"
+    kp: float = 0.5      # Proportional gain
+    ki: float = 0.01     # Integral gain (PID only)
+    kd: float = 0.1      # Derivative gain
 
 
 @dataclass
@@ -443,10 +445,12 @@ class ConfigManager:
 
             # Parse controller config
             controller_cfg = ControllerConfig()
-            if 'lane_analyzer' in data:
-                ctrl_data = data['lane_analyzer']
+            if 'controller' in data:
+                ctrl_data = data['controller']
                 controller_cfg = ControllerConfig(
+                    method=ctrl_data.get('method', controller_cfg.method),
                     kp=ctrl_data.get('kp', controller_cfg.kp),
+                    ki=ctrl_data.get('ki', controller_cfg.ki),
                     kd=ctrl_data.get('kd', controller_cfg.kd),
                 )
 

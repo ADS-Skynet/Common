@@ -92,9 +92,12 @@ lane_analyzer:
   lane_width_meters: 3.7     # Standard US highway lane
   max_heading_degrees: 30.0  # Maximum heading angle
 
-  # Steering controller gains (PD controller)
-  kp: 0.5  # Proportional gain
-  kd: 0.1  # Derivative gain
+# Controller Configuration
+controller:
+  method: "pid"  # Controller type: "pd" or "pid"
+  kp: 0.5        # Proportional gain
+  ki: 0.01       # Integral gain (PID only)
+  kd: 0.1        # Derivative gain
 
 # Throttle Control Policy
 # Adaptive throttle reduces speed during sharp turns

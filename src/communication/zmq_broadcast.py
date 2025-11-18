@@ -726,18 +726,22 @@ class VehicleStatusPublisher:
 
         print(f"✓ Vehicle status publisher connected to LKAS broker: {lkas_broker_url}")
 
-    def send_state(self, state: VehicleState):
+    def send_state(self, state: VehicleState | dict):
         """
         Send vehicle state to LKAS broker.
 
         Args:
-            state: Vehicle state data
+            state: Vehicle state data (VehicleState dataclass or dict)
         """
         try:
             if self.pub_socket.closed:
                 return
 
-            message = asdict(state)
+            # Support both VehicleState dataclass and plain dict
+            if isinstance(state, dict):
+                message = state
+            else:
+                message = asdict(state)
 
             # Send multipart: [topic, json_data]
             self.pub_socket.send_multipart([

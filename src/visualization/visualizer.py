@@ -274,11 +274,12 @@ class LKASVisualizer:
         if vehicle_telemetry:
             y_offset += 40
 
-            # Speed
+            # Speed and Throttle
             speed = vehicle_telemetry.get("speed_kmh", 0)
+            throttle = vehicle_telemetry.get("throttle", 0)
             cv2.putText(
                 output,
-                f"Speed: {speed:.1f} km/h",
+                f"Speed: {speed:.1f} km/h | Throttle: {throttle:.2f}",
                 (10, y_offset),
                 font,
                 font_scale,

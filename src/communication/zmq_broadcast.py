@@ -42,11 +42,16 @@ class FrameData:
 
 @dataclass
 class DetectionData:
-    """Lane detection results."""
+    """Lane detection results with metrics."""
     left_lane: Optional[Dict[str, float]]  # {x1, y1, x2, y2, confidence}
     right_lane: Optional[Dict[str, float]]
     processing_time_ms: float
     frame_id: int
+    # Lane metrics (calculated by LKAS, displayed by viewer)
+    lateral_offset_meters: Optional[float] = None
+    heading_angle_deg: Optional[float] = None
+    lane_width_pixels: Optional[float] = None
+    departure_status: Optional[str] = None  # 'CENTERED', 'LEFT_DRIFT', 'RIGHT_DRIFT', etc.
 
 
 @dataclass

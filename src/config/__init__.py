@@ -16,8 +16,6 @@ from .config import (
     ControllerConfig,
     ThrottlePolicyConfig,
     VisualizationConfig,
-    get_project_root,
-    DEFAULT_CONFIG_PATH,
 )
 
 __all__ = [
@@ -32,6 +30,4 @@ __all__ = [
     "ControllerConfig",
     "ThrottlePolicyConfig",
     "VisualizationConfig",
-    "get_project_root",
-    "DEFAULT_CONFIG_PATH",
 ]

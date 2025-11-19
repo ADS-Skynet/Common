@@ -7,28 +7,12 @@ from dataclasses import dataclass, field
 from typing import Tuple
 import yaml
 from pathlib import Path
-
-
-def get_project_root() -> Path:
-    """
-    Find the project root directory by locating pyproject.toml.
-
-    Returns:
-        Path to project root directory
-    """
-    # Start from this file's location and walk up to find pyproject.toml
-    current = Path(__file__).resolve()
-    for parent in [current] + list(current.parents):
-        if (parent / "pyproject.toml").exists():
-            return parent
-
-    # Fallback: assume project root is 3 levels up from this file
-    # (config/config.py -> src -> sky_commmon -> project root)
-    return Path(__file__).resolve().parent.parent.parent.parent
-
-
-# Default config path at project root
-DEFAULT_CONFIG_PATH = get_project_root() / "config.yaml"
+try:
+    # Python 3.9+
+    from importlib.resources import files, as_file
+except ImportError:
+    # Python 3.7-3.8 fallback
+    from importlib_resources import files, as_file
 
 
 @dataclass
@@ -298,8 +282,9 @@ class ConfigManager:
 
         Args:
             config_path: Path to YAML config file.
-                        If None, tries to load from project root config.yaml.
+                        If None, loads from packaged config.yaml in skynet_common.
                         If "default", uses built-in defaults without loading file.
+                        If a string/Path, loads from that filesystem path.
 
         Returns:
             Config object with loaded settings
@@ -308,18 +293,27 @@ class ConfigManager:
         if config_path == "default":
             return Config()
 
-        # If no path given, use project root config.yaml
-        if config_path is None:
-            config_path = DEFAULT_CONFIG_PATH
-
-        path = Path(config_path)
-        if not path.exists():
-            print(f"Warning: Config file {config_path} not found. Using defaults.")
-            return Config()
-
         try:
-            with open(path, 'r') as f:
-                data = yaml.safe_load(f)
+            # If no path given, use packaged config.yaml from skynet_common
+            if config_path is None:
+                try:
+                    # Use importlib.resources to access packaged config.yaml
+                    config_file = files('skynet_common').joinpath('config.yaml')
+                    with as_file(config_file) as config_path_obj:
+                        with open(config_path_obj, 'r') as f:
+                            data = yaml.safe_load(f)
+                except (FileNotFoundError, ModuleNotFoundError) as e:
+                    print(f"Warning: Packaged config.yaml not found. Using defaults. ({e})")
+                    return Config()
+            else:
+                # Use provided filesystem path
+                path = Path(config_path)
+                if not path.exists():
+                    print(f"Warning: Config file {config_path} not found. Using defaults.")
+                    return Config()
+
+                with open(path, 'r') as f:
+                    data = yaml.safe_load(f)
 
             if data is None:
                 return Config()

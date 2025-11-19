@@ -61,7 +61,7 @@ packages = [
 ]
 
 [tool.setuptools.package-data]
-"*" = ["*.yaml", "*.yml", "*.json"]
+skynet_common = ["config.yaml"]
 
 # Black code formatter configuration
 [tool.black]

@@ -72,15 +72,16 @@ cv_detector:
   min_slope: 0.5  # Minimum absolute slope to be considered a lane
 
   # ROI configuration (broader detection area)
-  roi_bottom_left_x: 0.05   # Fraction of width (bottom-left corner)
-  roi_top_left_x: 0.35      # Fraction of width (top-left corner)
-  roi_top_right_x: 0.65     # Fraction of width (top-right corner)
-  roi_bottom_right_x: 0.95  # Fraction of width (bottom-right corner)
+  roi_bottom_left_x: 0.10   # Fraction of width (bottom-left corner)
+  roi_top_left_x: 0.40      # Fraction of width (top-left corner)
+  roi_top_right_x: 0.70     # Fraction of width (top-right corner)
+  roi_bottom_right_x: 1.00  # Fraction of width (bottom-right corner)
   roi_top_y: 0.5            # Fraction of height (look at top 50% of image)
 
 # Deep Learning Detector
 dl_detector:
-  model_type: "pretrained"  # 'pretrained', 'simple', or 'full'
+  model_type: "pretrained"  # Keep using pretrained UNet architecture
+  model_path: "Tilak1812/lane-detection-unet-tusimple"  # HF Hub model ID
   input_size: [256, 256]
   threshold: 0.5
   device: "auto"  # 'cpu', 'cuda', or 'auto'

@@ -176,6 +176,7 @@ class CVDetectorConfig:
 class DLDetectorConfig:
     """Deep Learning detector parameters."""
     model_type: str = "pretrained"  # 'pretrained', 'simple', 'full'
+    model_path: str | None = None  # Path to custom trained weights (optional)
     input_size: Tuple[int, int] = (256, 256)
     threshold: float = 0.5
     device: str = "auto"  # 'cpu', 'cuda', 'auto'
@@ -421,6 +422,7 @@ class ConfigManager:
 
                 dl_cfg = DLDetectorConfig(
                     model_type=dl_data.get('model_type', dl_cfg.model_type),
+                    model_path=dl_data.get('model_path', dl_cfg.model_path),
                     input_size=input_size,
                     threshold=dl_data.get('threshold', dl_cfg.threshold),
                     device=dl_data.get('device', dl_cfg.device),
@@ -655,6 +657,7 @@ class ConfigManager:
                 },
                 'dl_detector': {
                     'model_type': config.dl_detector.model_type,
+                    'model_path': config.dl_detector.model_path,
                     'input_size': list(config.dl_detector.input_size),
                     'threshold': config.dl_detector.threshold,
                     'device': config.dl_detector.device,

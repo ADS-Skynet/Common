@@ -175,11 +175,12 @@ class CVDetectorConfig:
 @dataclass
 class DLDetectorConfig:
     """Deep Learning detector parameters."""
-    model_type: str = "pretrained"  # 'pretrained', 'simple', 'full'
+    framework: str = "pytorch"  # 'pytorch' or 'keras'
+    model_type: str = "pretrained"  # 'pretrained', 'simple', 'full' (PyTorch only)
     model_path: str | None = None  # Path to custom trained weights (optional)
     input_size: Tuple[int, int] = (256, 256)
     threshold: float = 0.5
-    device: str = "auto"  # 'cpu', 'cuda', 'auto'
+    device: str = "auto"  # 'cpu', 'cuda', 'auto' (PyTorch only)
 
 
 @dataclass
@@ -421,6 +422,7 @@ class ConfigManager:
                     input_size = tuple(input_size)
 
                 dl_cfg = DLDetectorConfig(
+                    framework=dl_data.get('framework', dl_cfg.framework),
                     model_type=dl_data.get('model_type', dl_cfg.model_type),
                     model_path=dl_data.get('model_path', dl_cfg.model_path),
                     input_size=input_size,

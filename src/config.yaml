@@ -5,9 +5,9 @@
 # Inter-process Communication
 communication:
   # Shared Memory Channel Names
-  image_shm_name: "camera_feed"
-  detection_shm_name: "detection_results"
-  control_shm_name: "control_commands"
+  image_shm_name: "image"
+  detection_shm_name: "detection"
+  control_shm_name: "control"
 
   # ZMQ Base Ports
   zmq_broadcast_port: 5557      # Simulation -> Viewer (frame/detection/state)
@@ -80,11 +80,13 @@ cv_detector:
 
 # Deep Learning Detector
 dl_detector:
-  model_type: "pretrained"
-  model_path: "hf://Tilak1812/lane-detection-unet-tusimple"
-  input_size: [256, 256]
+  framework: "keras"  # 'pytorch' or 'keras'
+  model_type: "pretrained"  # Keep using pretrained UNet architecture (PyTorch only)
+  model_path: "Tilak1812/lane-detection-unet-tusimple"  # HF Hub model ID
+  input_size: [224, 224]  # Note: Keras model uses 224x224, PyTorch uses 256x256
   threshold: 0.5
-  device: "auto"  # 'cpu', 'cuda', or 'auto'
+  device: "auto"  # 'cpu', 'cuda', or 'auto' (PyTorch only)
+
 
 # Lane Analyzer
 lane_analyzer:

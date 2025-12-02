@@ -105,7 +105,7 @@ controller:
 # Throttle Control Policy
 # Adaptive throttle reduces speed during sharp turns
 throttle_policy:
-  base: 0.10              # Base throttle when steering is minimal
+  base: 0.15              # Base throttle when steering is minimal
   min: 0.05               # Minimum throttle during sharp turns
   steer_threshold: 0.15   # Steering magnitude to start reducing throttle
   steer_max: 0.70         # Maximum expected steering magnitude

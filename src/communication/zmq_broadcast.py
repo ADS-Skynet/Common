@@ -69,8 +69,8 @@ class VehicleState:
 @dataclass
 class ParameterUpdate:
     """Parameter update message for real-time tuning."""
-    category: str  # 'detection' or 'decision'
-    parameter: str  # Parameter name (e.g., 'canny_low', 'kp')
+    category: str  # 'detection', 'decision', or 'vehicle'
+    parameter: str  # Parameter name (e.g., 'canny_low', 'kp', 'throttle')
     value: float    # New parameter value
     timestamp: float = 0.0
 
@@ -563,7 +563,7 @@ class ActionSubscriber:
 
 class ParameterPublisher:
     """
-    Publisher: Sends parameter updates from viewer to vehicle/simulation.
+    Publisher: Sends parameter updates from viewer to detection/decision/vehicle servers.
 
     Runs in viewer process. Publishes real-time parameter adjustments.
     """
@@ -597,7 +597,7 @@ class ParameterPublisher:
         Send parameter update.
 
         Args:
-            category: 'detection' or 'decision'
+            category: 'detection', 'decision', or 'vehicle'
             parameter: Parameter name
             value: New value
         """
@@ -638,76 +638,114 @@ class ParameterPublisher:
 
 class ParameterSubscriber:
     """
-    Subscriber: Receives parameter updates in detection/decision servers.
+    Subscriber for parameter updates from a single category.
 
-    Runs in detection and decision servers. Applies parameter changes in real-time.
+    Simple, clean API for detection, decision, and vehicle servers.
+    Each subscriber subscribes to ONE category only.
+
+    Pairs with ParameterPublisher for consistent pub-sub naming.
+
+    Usage:
+        # In detection server
+        subscriber = ParameterSubscriber(category='detection')
+        subscriber.register_callback(on_parameter_update)
+
+        # In main loop
+        while running:
+            subscriber.poll()  # Non-blocking, processes any pending updates
     """
 
-    def __init__(self, connect_url: str = "tcp://localhost:5559"):
+    def __init__(
+        self,
+        category: str,
+        broker_url: str = "tcp://localhost:5560",
+        context: Optional[zmq.Context] = None,
+    ):
         """
-        Initialize parameter subscriber.
+        Initialize parameter client.
 
         Args:
-            connect_url: ZMQ URL to connect to parameter broker
+            category: Category to subscribe to ('detection', 'decision', or 'vehicle')
+            broker_url: ZMQ URL of the parameter broker
+            context: ZMQ context (optional, will create if not provided)
         """
-        self.context = zmq.Context()
+        self.category = category
+        self.broker_url = broker_url
+
+        # Create or use provided context
+        self.context = context if context else zmq.Context()
+        self.owns_context = context is None
+
+        # Create subscriber socket
         self.socket = self.context.socket(zmq.SUB)
-        self.socket.connect(connect_url)
-        self.socket.setsockopt(zmq.SUBSCRIBE, b'parameter')
-        self.socket.setsockopt(zmq.RCVTIMEO, 10)  # 10ms timeout for non-blocking
+        self.socket.connect(broker_url)
 
-        print(f"✓ Parameter subscriber connected to {connect_url}")
+        # Subscribe only to our category
+        self.socket.setsockopt(zmq.SUBSCRIBE, category.encode('utf-8'))
 
-        # Callbacks for different categories
-        self.parameter_callbacks: Dict[str, Callable[[str, float], None]] = {}
+        # Non-blocking mode with timeout
+        self.socket.setsockopt(zmq.RCVTIMEO, 10)  # 10ms timeout for consistency
 
-    def register_callback(self, category: str, callback: Callable[[str, float], None]):
+        # Callback function
+        self.callback: Optional[Callable[[str, float], None]] = None
+
+        print(f"✓ Parameter subscriber connected to {broker_url} (category: {category})")
+
+    def register_callback(self, callback: Callable[[str, float], None]):
         """
         Register callback for parameter updates.
 
         Args:
-            category: Category to listen for ('detection' or 'decision')
-            callback: Function(parameter_name, value) to handle updates
+            callback: Function that takes (parameter_name: str, value: float)
+
+        Example:
+            def on_update(param_name: str, value: float):
+                print(f"Parameter {param_name} updated to {value}")
+
+            client.register_callback(on_update)
         """
-        self.parameter_callbacks[category] = callback
-        print(f"  Registered parameter callback for: {category}")
+        self.callback = callback
 
     def poll(self) -> bool:
         """
         Poll for parameter updates (non-blocking).
 
+        Call this regularly in your main loop.
+
         Returns:
-            True if received update, False otherwise
+            True if a message was received, False otherwise
         """
         try:
+            # Receive multipart message: [category, json_data]
             parts = self.socket.recv_multipart(zmq.NOBLOCK)
-            topic = parts[0].decode('utf-8')
+
+            category = parts[0].decode('utf-8')
             data = json.loads(parts[1].decode('utf-8'))
 
-            if topic == 'parameter':
-                update = ParameterUpdate(**data)
+            # Extract parameter info
+            parameter = data['parameter']
+            value = data['value']
 
-                # Call registered callback for this category
-                if update.category in self.parameter_callbacks:
-                    self.parameter_callbacks[update.category](
-                        update.parameter,
-                        update.value
-                    )
-                    return True
+            # Call user callback
+            if self.callback:
+                self.callback(parameter, value)
 
-            return False
+            return True
 
         except zmq.Again:
-            # No message available
+            # No message available (this is normal)
             return False
         except Exception as e:
-            # print(f"⚠ Error receiving parameter: {e}")
+            # Unexpected error (log but don't crash)
+            # print(f"[ParameterSubscriber] Error receiving message: {e}")
             return False
 
     def close(self):
-        """Close subscriber."""
-        self.socket.close()
-        self.context.term()
+        """Close the subscriber and cleanup resources."""
+        if self.socket:
+            self.socket.close()
+        if self.owns_context and self.context:
+            self.context.term()
 
 
 class VehicleStatusPublisher:

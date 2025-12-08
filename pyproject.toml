@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "common"
+name = "skynet-common"
 version = "0.1.0"
 description = "Shared types and utilities for ADS-Skynet Autonomous Driving System"
 readme = "README.md"
@@ -47,7 +47,7 @@ dev = [
 ]
 
 # All optional dependencies
-all = ["common[dev]"]
+all = ["skynet-common[dev]"]
 
 # Package discovery (src-layout)
 [tool.setuptools]

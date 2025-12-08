@@ -150,7 +150,7 @@ timing:
 # Video Streaming and Compression
 streaming:
   jpeg_quality: 75                # JPEG compression quality (0-100, 85-90 is good balance)
-  raw_rgb: true                  # Send raw RGB instead of JPEG (false = use JPEG compression)
+  raw_rgb: false                  # Send raw RGB instead of JPEG (false = use JPEG compression)
   web_viewer_fps: 60              # Web viewer target FPS
   stream_frame_delay_ms: 15       # Frame delay for streaming (~60fps)
   broadcast_log_interval: 100     # Log every N frames

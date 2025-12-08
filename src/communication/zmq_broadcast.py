@@ -351,6 +351,7 @@ class ViewerSubscriber:
                     image_rgb = np.frombuffer(frame_data, dtype=np.uint8).reshape((height, width, 3))
                     decode_time_ms = (time.time() - decode_start) * 1000
                     metadata['decode_time_ms'] = decode_time_ms
+                    metadata['original_jpeg_bytes'] = None  # No JPEG bytes for raw RGB
                 else:
                     # Decode JPEG (measure for performance monitoring)
                     decode_start = time.time()
@@ -359,6 +360,8 @@ class ViewerSubscriber:
                     image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
                     decode_time_ms = (time.time() - decode_start) * 1000
                     metadata['decode_time_ms'] = decode_time_ms
+                    # Store original JPEG bytes for potential reuse in viewer
+                    metadata['original_jpeg_bytes'] = frame_data
 
                 self.latest_frame = image_rgb
                 self.frame_count += 1

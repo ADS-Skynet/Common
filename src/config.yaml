@@ -20,7 +20,7 @@ communication:
   zmq_vehicle_status_port: 5562    # Vehicle status broadcasting
 
   # Default hosts
-  zmq_broadcast_host: "localhost"
+  zmq_broadcast_host: "*"
 
   # ZMQ Socket Options
   zmq_socket:

@@ -2,7 +2,7 @@
 ZMQ communication utilities for distributed system.
 """
 
-from skynet_common.communication.zmq_broadcast import (
+from common.communication.zmq_broadcast import (
     # Data structures
     FrameData,
     DetectionData,

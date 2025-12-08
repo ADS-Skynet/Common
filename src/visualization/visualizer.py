@@ -6,7 +6,7 @@ Provides visualization utilities for lane detection and LKAS feedback.
 import cv2
 import numpy as np
 from typing import Tuple, Dict
-from skynet_common.types.models import Lane, LaneDepartureStatus
+from common.types.models import Lane, LaneDepartureStatus
 
 
 class LKASVisualizer:

@@ -284,7 +284,7 @@ class ConfigManager:
 
         Args:
             config_path: Path to YAML config file.
-                        If None, loads from packaged config.yaml in skynet_common.
+                        If None, loads from packaged config.yaml in common.
                         If "default", uses built-in defaults without loading file.
                         If a string/Path, loads from that filesystem path.
 
@@ -296,11 +296,11 @@ class ConfigManager:
             return Config()
 
         try:
-            # If no path given, use packaged config.yaml from skynet_common
+            # If no path given, use packaged config.yaml from common
             if config_path is None:
                 try:
                     # Use importlib.resources to access packaged config.yaml
-                    config_file = files('skynet_common').joinpath('config.yaml')
+                    config_file = files('common').joinpath('config.yaml')
                     with as_file(config_file) as config_path_obj:
                         with open(config_path_obj, 'r') as f:
                             data = yaml.safe_load(f)

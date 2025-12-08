@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "skynet-common"
+name = "common"
 version = "0.1.0"
-description = "Shared types and utilities for Skynet Autonomous Driving System"
+description = "Shared types and utilities for ADS-Skynet Autonomous Driving System"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "See LICENSE file" }
@@ -47,21 +47,21 @@ dev = [
 ]
 
 # All optional dependencies
-all = ["skynet-common[dev]"]
+all = ["common[dev]"]
 
 # Package discovery (src-layout)
 [tool.setuptools]
-package-dir = {"skynet_common" = "src"}
+package-dir = {"common" = "src"}
 packages = [
-    "skynet_common",
-    "skynet_common.types",
-    "skynet_common.communication",
-    "skynet_common.visualization",
-    "skynet_common.config",
+    "common",
+    "common.types",
+    "common.communication",
+    "common.visualization",
+    "common.config",
 ]
 
 [tool.setuptools.package-data]
-skynet_common = ["config.yaml"]
+common = ["config.yaml"]
 
 # Black code formatter configuration
 [tool.black]

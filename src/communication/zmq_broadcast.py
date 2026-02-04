@@ -52,6 +52,10 @@ class DetectionData:
     heading_angle_deg: Optional[float] = None
     lane_width_pixels: Optional[float] = None
     departure_status: Optional[str] = None  # 'CENTERED', 'LEFT_DRIFT', 'RIGHT_DRIFT', etc.
+    # Deep learning segmentation data
+    detection_method: Optional[str] = None  # 'cv' or 'dl'
+    segmentation_mask_base64: Optional[str] = None  # Base64 encoded PNG
+    segmentation_mask_shape: Optional[list] = None  # [height, width]
 
 
 @dataclass

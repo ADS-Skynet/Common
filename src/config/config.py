@@ -174,13 +174,15 @@ class CVDetectorConfig:
 
 @dataclass
 class DLDetectorConfig:
-    """Deep Learning detector parameters."""
+    """Deep Learning detector parameters (BiSeNet V2)."""
     framework: str = "pytorch"  # 'pytorch' or 'keras'
-    model_type: str = "pretrained"  # 'pretrained', 'simple', 'full' (PyTorch only)
+    model_type: str = "pretrained"  # 'pretrained', 'binary', 'multi'
     model_path: str | None = None  # Path to custom trained weights (optional)
-    input_size: Tuple[int, int] = (256, 256)
+    input_size: Tuple[int, int] = (512, 1024)  # BiSeNet default (height, width)
     threshold: float = 0.5
-    device: str = "auto"  # 'cpu', 'cuda', 'auto' (PyTorch only)
+    device: str = "auto"  # 'cpu', 'cuda', 'auto'
+    n_classes: int = 2  # Number of segmentation classes (2 for binary lane/background)
+    smoothing_factor: float = 0.7  # Temporal smoothing factor [0, 1]
 
 
 @dataclass
@@ -428,6 +430,8 @@ class ConfigManager:
                     input_size=input_size,
                     threshold=dl_data.get('threshold', dl_cfg.threshold),
                     device=dl_data.get('device', dl_cfg.device),
+                    n_classes=dl_data.get('n_classes', dl_cfg.n_classes),
+                    smoothing_factor=dl_data.get('smoothing_factor', dl_cfg.smoothing_factor),
                 )
 
             # Parse analyzer config

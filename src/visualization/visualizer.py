@@ -102,6 +102,45 @@ class LKASVisualizer:
 
         return output
 
+    def draw_segmentation(
+        self,
+        image: np.ndarray,
+        segmentation_mask: np.ndarray,
+        alpha: float = 0.4,
+    ) -> np.ndarray:
+        """
+        Draw segmentation mask overlay on image.
+
+        Args:
+            image: Input image (H, W, 3) BGR or RGB
+            segmentation_mask: Segmentation mask (H, W) with class indices
+            alpha: Blend factor for overlay (0-1)
+
+        Returns:
+            Image with segmentation overlay
+        """
+        output = image.copy()
+
+        # Ensure mask matches image dimensions
+        if segmentation_mask.shape[:2] != image.shape[:2]:
+            segmentation_mask = cv2.resize(
+                segmentation_mask,
+                (image.shape[1], image.shape[0]),
+                interpolation=cv2.INTER_NEAREST
+            )
+
+        # Create colored overlay for lane pixels (class > 0)
+        overlay = np.zeros_like(output)
+        lane_pixels = segmentation_mask > 0
+
+        # Cyan color for lane (works in both BGR and RGB)
+        overlay[lane_pixels] = [0, 255, 255]
+
+        # Blend overlay with original image
+        output = cv2.addWeighted(output, 1 - alpha, overlay, alpha, 0)
+
+        return output
+
     def draw_vehicle_position(
         self,
         image: np.ndarray,

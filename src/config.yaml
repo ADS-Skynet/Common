@@ -78,14 +78,16 @@ cv_detector:
   roi_bottom_right_x: 1.00  # Fraction of width (bottom-right corner)
   roi_top_y: 0.5            # Fraction of height (look at top 50% of image)
 
-# Deep Learning Detector
+# Deep Learning Detector (BiSeNet V2)
 dl_detector:
-  framework: "keras"  # 'pytorch' or 'keras'
-  model_type: "pretrained"  # Keep using pretrained UNet architecture (PyTorch only)
-  model_path: "Tilak1812/lane-detection-unet-tusimple"  # HF Hub model ID
-  input_size: [224, 224]  # Note: Keras model uses 224x224, PyTorch uses 256x256
+  framework: "pytorch"  # 'pytorch' or 'keras'
+  model_type: "pretrained"  # 'pretrained', 'binary', 'multi'
+  model_path: null  # null uses default path (lane-detection-dl/inference/bisenet-0203.pth)
+  input_size: [512, 1024]  # BiSeNet default (height, width)
   threshold: 0.5
-  device: "auto"  # 'cpu', 'cuda', or 'auto' (PyTorch only)
+  device: "auto"  # 'cpu', 'cuda', or 'auto'
+  n_classes: 2  # Number of segmentation classes (2 for binary lane/background)
+  smoothing_factor: 0.7  # Temporal smoothing factor [0, 1]
 
 
 # Lane Analyzer

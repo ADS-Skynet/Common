@@ -99,7 +99,7 @@ lane_analyzer:
 
 # Controller Configuration
 controller:
-  method: "pid"  # Controller type: "pd", "pid", "pure_pursuit", "mpc"
+  method: "pure_pursuit"  # Controller type: "pd", "pid", "pure_pursuit", "mpc"
   kp: 0.5        # Proportional gain (or main gain for Pure Pursuit)
   ki: 0.01       # Integral gain (PID only)
   kd: 0.1        # Derivative gain (or heading gain for Pure Pursuit)

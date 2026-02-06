@@ -87,7 +87,7 @@ dl_detector:
   threshold: 0.5
   device: "auto"  # 'cpu', 'cuda', or 'auto'
   n_classes: 2  # Number of segmentation classes (2 for binary lane/background)
-  smoothing_factor: 0.7  # Temporal smoothing factor [0, 1]
+  smoothing_factor: 0.5  # Temporal smoothing factor [0, 1]
 
 
 # Lane Analyzer
@@ -152,7 +152,7 @@ timing:
 
 # Video Streaming and Compression
 streaming:
-  jpeg_quality: 75                # JPEG compression quality (0-100, 85-90 is good balance)
+  jpeg_quality: 50                # JPEG compression quality (0-100, 85-90 is good balance)
   raw_rgb: false                  # Send raw RGB instead of JPEG (false = use JPEG compression)
   web_viewer_fps: 60              # Web viewer target FPS
   stream_frame_delay_ms: 15       # Frame delay for streaming (~60fps)

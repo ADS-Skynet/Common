@@ -56,6 +56,12 @@ class DetectionData:
     detection_method: Optional[str] = None  # 'cv' or 'dl'
     segmentation_mask_base64: Optional[str] = None  # Base64 encoded PNG
     segmentation_mask_shape: Optional[list] = None  # [height, width]
+    # Multiple lane contours (DL detection)
+    lanes: Optional[list] = None  # List of {points, class_id, confidence}
+    # Debug polynomial coefficients for viewer overlay (x = ay^2 + by + c)
+    left_poly: Optional[list] = None    # [a, b, c] or None
+    right_poly: Optional[list] = None   # [a, b, c] or None
+    center_poly: Optional[list] = None  # [a, b, c] or None
 
 
 @dataclass
@@ -163,9 +169,19 @@ class VehicleBroadcaster:
             self.frame_count = 0
             self.last_print_time = time.time()
 
-    def send_detection(self, detection: DetectionData):
-        """Send detection results to viewers."""
-        message = asdict(detection)
+    def send_detection(self, detection: DetectionData | dict, frame_id: int = None):
+        """
+        Send detection results to viewers.
+
+        Args:
+            detection: DetectionData dataclass or dict with detection data
+            frame_id: Optional frame ID (ignored, for compatibility)
+        """
+        # Accept both DetectionData and dict
+        if isinstance(detection, dict):
+            message = detection
+        else:
+            message = asdict(detection)
 
         self.socket.send_multipart([
             b'detection',

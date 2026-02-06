@@ -40,8 +40,8 @@ carla:
 
 # Camera Sensor
 camera:
-  width: 640
-  height: 480
+  width: 768
+  height: 384
   fov: 90.0
   position:
     x: 2.0    # Forward from vehicle center
@@ -82,8 +82,8 @@ cv_detector:
 dl_detector:
   framework: "pytorch"  # 'pytorch' or 'keras'
   model_type: "pretrained"  # 'pretrained', 'binary', 'multi'
-  model_path: null  # null uses default path (lane-detection-dl/inference/bisenet-0203.pth)
-  input_size: [512, 1024]  # BiSeNet default (height, width)
+  model_path: ../lane-detection-dl/inference/bisenet-0204.pth  # null uses default path (lane-detection-dl/inference/bisenet-0203.pth)
+  input_size: [384, 768]  # BiSeNet default (height, width)
   threshold: 0.5
   device: "auto"  # 'cpu', 'cuda', or 'auto'
   n_classes: 2  # Number of segmentation classes (2 for binary lane/background)
@@ -99,10 +99,11 @@ lane_analyzer:
 
 # Controller Configuration
 controller:
-  method: "pid"  # Controller type: "pd" or "pid"
-  kp: 0.5        # Proportional gain
+  method: "pid"  # Controller type: "pd", "pid", "pure_pursuit", "mpc"
+  kp: 0.5        # Proportional gain (or main gain for Pure Pursuit)
   ki: 0.01       # Integral gain (PID only)
-  kd: 0.1        # Derivative gain
+  kd: 0.1        # Derivative gain (or heading gain for Pure Pursuit)
+  lookahead_ratio: 0.4  # Lookahead distance as fraction of image height (Pure Pursuit only)
 
 # Throttle Control Policy
 # Adaptive throttle reduces speed during sharp turns
@@ -178,4 +179,4 @@ control_limits:
 
 # System Settings
 system:
-  detection_method: "cv"  # "cv" or "dl"
+  detection_method: "dl"  # "cv" or "dl"

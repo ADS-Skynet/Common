@@ -183,6 +183,7 @@ class DLDetectorConfig:
     device: str = "auto"  # 'cpu', 'cuda', 'auto'
     n_classes: int = 2  # Number of segmentation classes (2 for binary lane/background)
     smoothing_factor: float = 0.7  # Temporal smoothing factor [0, 1]
+    use_fp16: bool = True  # Use half precision (FP16) for faster inference
 
 
 @dataclass
@@ -196,11 +197,12 @@ class AnalyzerConfig:
 
 @dataclass
 class ControllerConfig:
-    """Controller parameters (PD/PID)."""
-    method: str = "pid"  # Controller type: "pd" or "pid"
-    kp: float = 0.5      # Proportional gain
+    """Controller parameters (PD/PID/Pure Pursuit)."""
+    method: str = "pid"  # Controller type: "pd", "pid", "pure_pursuit", "mpc"
+    kp: float = 0.5      # Proportional gain (or main gain for Pure Pursuit)
     ki: float = 0.01     # Integral gain (PID only)
-    kd: float = 0.1      # Derivative gain
+    kd: float = 0.1      # Derivative gain (or heading gain for Pure Pursuit)
+    lookahead_ratio: float = 0.4  # Lookahead distance as fraction of image height (Pure Pursuit only)
 
 
 @dataclass
@@ -454,6 +456,7 @@ class ConfigManager:
                     kp=ctrl_data.get('kp', controller_cfg.kp),
                     ki=ctrl_data.get('ki', controller_cfg.ki),
                     kd=ctrl_data.get('kd', controller_cfg.kd),
+                    lookahead_ratio=ctrl_data.get('lookahead_ratio', controller_cfg.lookahead_ratio),
                 )
 
             # Parse throttle policy config

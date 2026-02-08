@@ -51,7 +51,7 @@ camera:
     pitch: -10.0  # Tilt down
     yaw: 0.0
     roll: 0.0
-  offset_x: 0  # Camera center offset from vehicle center (pixels, negative = shift reference left)
+  offset_x: -75  # Camera center offset from vehicle center (pixels, negative = shift reference left)
 
 # Computer Vision Detector
 cv_detector:

@@ -62,6 +62,9 @@ class DetectionData:
     left_poly: Optional[list] = None    # [a, b, c] or None
     right_poly: Optional[list] = None   # [a, b, c] or None
     center_poly: Optional[list] = None  # [a, b, c] or None
+    # Lane boundary confidence scores [0, 1]
+    left_confidence: float = 0.0
+    right_confidence: float = 0.0
 
 
 @dataclass

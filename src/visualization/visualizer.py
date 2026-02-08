@@ -136,46 +136,10 @@ class LKASVisualizer:
         lane_pixels = segmentation_mask > 0
 
         # Transparent blue color for lane (RGB format: blue with some green for visibility)
-        overlay[lane_pixels] = [150, 100, 50]  # Light blue in RGB
+        overlay[lane_pixels] = [250, 100, 50]  # Light blue in RGB
 
         # Blend overlay with original image
         output = cv2.addWeighted(output, 1 - alpha, overlay, alpha, 0)
-
-
-        # colors = {
-        #     0: (255, 0, 0),      # Lane class 1 (red)
-        #     1: (0, 255, 0),      # Lane class 2 (green)
-        #     2: (0, 0, 255),      # Lane class 3 (blue)
-        #     3: (255, 255, 0),    # Lane class 4 (cyan)
-        #     4: (255, 0, 255),    # Lane class 5 (magenta)
-        #     5: (0, 255, 255),    # Lane class 6 (yellow)
-        # }
-        # # blue_color = (150, 100, 50)  # Light blue
-
-        # output = image.copy()
-        # overlay = np.zeros_like(output)
-        # color = 0
-
-        # for lane in lanes:
-        #     points = lane.get('points', [])
-        #     confidence = lane.get('confidence', 1.0)
-
-        #     if len(points) < 2:
-        #         continue
-
-        #     # Convert points to numpy array for drawing
-        #     pts = np.array(points, dtype=np.int32)
-
-        #     # Draw filled polygon with transparency (no border)
-        #     cv2.fillPoly(overlay, [pts], np.array(colors.get(color, (255, 255, 255))) * confidence * 3)  # Default to white if class not in colors
-
-        #     # lane_pixels = segmentation_mask > 0
-        #     # overlay[lane_pixels] = np.array(colors.get(color, (255, 255, 255))) * confidence * 3
-
-        #     color += 1
-
-        # alpha = 0.4  # Transparent blend based on confidence
-        # cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
 
         return output
 

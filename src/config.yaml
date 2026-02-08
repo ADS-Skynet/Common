@@ -51,6 +51,7 @@ camera:
     pitch: -10.0  # Tilt down
     yaw: 0.0
     roll: 0.0
+  offset_x: 0  # Camera center offset from vehicle center (pixels, negative = shift reference left)
 
 # Computer Vision Detector
 cv_detector:
@@ -87,7 +88,7 @@ dl_detector:
   threshold: 0.5
   device: "auto"  # 'cpu', 'cuda', or 'auto'
   n_classes: 2  # Number of segmentation classes (2 for binary lane/background)
-  smoothing_factor: 0.5  # Temporal smoothing factor [0, 1]
+  smoothing_factor: 0.0  # Temporal smoothing factor [0, 1]
 
 
 # Lane Analyzer
@@ -100,10 +101,10 @@ lane_analyzer:
 # Controller Configuration
 controller:
   method: "pure_pursuit"  # Controller type: "pd", "pid", "pure_pursuit", "mpc"
-  kp: 0.5        # Proportional gain (or main gain for Pure Pursuit)
+  kp: 0.8        # Proportional gain (or main gain for Pure Pursuit)
   ki: 0.01       # Integral gain (PID only)
   kd: 0.1        # Derivative gain (or heading gain for Pure Pursuit)
-  lookahead_ratio: 0.4  # Lookahead distance as fraction of image height (Pure Pursuit only)
+  lookahead_ratio: 0.2  # Lookahead distance as fraction of image height (Pure Pursuit only)
 
 # Throttle Control Policy
 # Adaptive throttle reduces speed during sharp turns

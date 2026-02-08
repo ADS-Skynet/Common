@@ -149,6 +149,7 @@ class CameraConfig:
     fov: float = 90.0
     position: Tuple[float, float, float] = (2.0, 0.0, 1.5)  # x, y, z
     rotation: Tuple[float, float, float] = (-10.0, 0.0, 0.0)  # pitch, yaw, roll
+    offset_x: int = 0  # Camera center offset from vehicle center (pixels, negative = shift left)
 
 
 @dataclass
@@ -392,6 +393,7 @@ class ConfigManager:
                     fov=cam_data.get('fov', camera_cfg.fov),
                     position=position,
                     rotation=rotation,
+                    offset_x=cam_data.get('offset_x', camera_cfg.offset_x),
                 )
 
             # Parse CV detector config
@@ -647,6 +649,7 @@ class ConfigManager:
                         'yaw': rotation[1],
                         'roll': rotation[2],
                     },
+                    'offset_x': config.camera.offset_x,
                 },
                 'cv_detector': {
                     'canny_low': config.cv_detector.canny_low,

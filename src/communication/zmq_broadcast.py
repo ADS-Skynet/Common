@@ -605,7 +605,7 @@ class ParameterPublisher:
 
         if connect_mode:
             # Connect to LKAS broker (new architecture)
-            # Convert tcp://*:5559 to tcp://localhost:5559 for connect
+            # Convert wildcard bind URL to localhost if needed
             connect_url = bind_url.replace("tcp://*:", "tcp://localhost:")
             self.socket.connect(connect_url)
         else:

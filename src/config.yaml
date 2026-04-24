@@ -40,8 +40,8 @@ carla:
 
 # Camera Sensor
 camera:
-  width: 640
-  height: 480
+  width: 768
+  height: 384
   fov: 90.0
   position:
     x: 2.0    # Forward from vehicle center
@@ -51,6 +51,7 @@ camera:
     pitch: -10.0  # Tilt down
     yaw: 0.0
     roll: 0.0
+  offset_x: -75  # Camera center offset from vehicle center (pixels, negative = shift reference left)
 
 # Computer Vision Detector
 cv_detector:
@@ -78,14 +79,16 @@ cv_detector:
   roi_bottom_right_x: 1.00  # Fraction of width (bottom-right corner)
   roi_top_y: 0.5            # Fraction of height (look at top 50% of image)
 
-# Deep Learning Detector
+# Deep Learning Detector (BiSeNet V2)
 dl_detector:
-  framework: "keras"  # 'pytorch' or 'keras'
-  model_type: "pretrained"  # Keep using pretrained UNet architecture (PyTorch only)
-  model_path: "Tilak1812/lane-detection-unet-tusimple"  # HF Hub model ID
-  input_size: [224, 224]  # Note: Keras model uses 224x224, PyTorch uses 256x256
+  framework: "pytorch"  # 'pytorch' or 'keras'
+  model_type: "pretrained"  # 'pretrained', 'binary', 'multi'
+  model_path: ../lane-detection-dl/inference/bisenet-0204.pth  # null uses default path (lane-detection-dl/inference/bisenet-0203.pth)
+  input_size: [384, 768]  # BiSeNet default (height, width)
   threshold: 0.5
-  device: "auto"  # 'cpu', 'cuda', or 'auto' (PyTorch only)
+  device: "auto"  # 'cpu', 'cuda', or 'auto'
+  n_classes: 2  # Number of segmentation classes (2 for binary lane/background)
+  smoothing_factor: 0.0  # Temporal smoothing factor [0, 1]
 
 
 # Lane Analyzer
@@ -97,10 +100,11 @@ lane_analyzer:
 
 # Controller Configuration
 controller:
-  method: "pid"  # Controller type: "pd" or "pid"
-  kp: 0.5        # Proportional gain
+  method: "pure_pursuit"  # Controller type: "pd", "pid", "pure_pursuit", "mpc"
+  kp: 0.8        # Proportional gain (or main gain for Pure Pursuit)
   ki: 0.01       # Integral gain (PID only)
-  kd: 0.1        # Derivative gain
+  kd: 0.1        # Derivative gain (or heading gain for Pure Pursuit)
+  lookahead_ratio: 0.2  # Lookahead distance as fraction of image height (Pure Pursuit only)
 
 # Throttle Control Policy
 # Adaptive throttle reduces speed during sharp turns
@@ -149,7 +153,7 @@ timing:
 
 # Video Streaming and Compression
 streaming:
-  jpeg_quality: 75                # JPEG compression quality (0-100, 85-90 is good balance)
+  jpeg_quality: 50                # JPEG compression quality (0-100, 85-90 is good balance)
   raw_rgb: false                  # Send raw RGB instead of JPEG (false = use JPEG compression)
   web_viewer_fps: 60              # Web viewer target FPS
   stream_frame_delay_ms: 15       # Frame delay for streaming (~60fps)
@@ -176,4 +180,4 @@ control_limits:
 
 # System Settings
 system:
-  detection_method: "cv"  # "cv" or "dl"
+  detection_method: "dl"  # "cv" or "dl"

@@ -52,6 +52,19 @@ class DetectionData:
     heading_angle_deg: Optional[float] = None
     lane_width_pixels: Optional[float] = None
     departure_status: Optional[str] = None  # 'CENTERED', 'LEFT_DRIFT', 'RIGHT_DRIFT', etc.
+    # Deep learning segmentation data
+    detection_method: Optional[str] = None  # 'cv' or 'dl'
+    segmentation_mask_base64: Optional[str] = None  # Base64 encoded PNG
+    segmentation_mask_shape: Optional[list] = None  # [height, width]
+    # Multiple lane contours (DL detection)
+    lanes: Optional[list] = None  # List of {points, class_id, confidence}
+    # Debug polynomial coefficients for viewer overlay (x = ay^2 + by + c)
+    left_poly: Optional[list] = None    # [a, b, c] or None
+    right_poly: Optional[list] = None   # [a, b, c] or None
+    center_poly: Optional[list] = None  # [a, b, c] or None
+    # Lane boundary confidence scores [0, 1]
+    left_confidence: float = 0.0
+    right_confidence: float = 0.0
 
 
 @dataclass
@@ -159,9 +172,19 @@ class VehicleBroadcaster:
             self.frame_count = 0
             self.last_print_time = time.time()
 
-    def send_detection(self, detection: DetectionData):
-        """Send detection results to viewers."""
-        message = asdict(detection)
+    def send_detection(self, detection: DetectionData | dict, frame_id: int = None):
+        """
+        Send detection results to viewers.
+
+        Args:
+            detection: DetectionData dataclass or dict with detection data
+            frame_id: Optional frame ID (ignored, for compatibility)
+        """
+        # Accept both DetectionData and dict
+        if isinstance(detection, dict):
+            message = detection
+        else:
+            message = asdict(detection)
 
         self.socket.send_multipart([
             b'detection',
@@ -585,7 +608,7 @@ class ParameterPublisher:
 
         if connect_mode:
             # Connect to LKAS broker (new architecture)
-            # Convert tcp://*:5559 to tcp://localhost:5559 for connect
+            # Convert wildcard bind URL to localhost if needed
             connect_url = bind_url.replace("tcp://*:", "tcp://localhost:")
             self.socket.connect(connect_url)
         else:

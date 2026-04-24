@@ -149,6 +149,7 @@ class CameraConfig:
     fov: float = 90.0
     position: Tuple[float, float, float] = (2.0, 0.0, 1.5)  # x, y, z
     rotation: Tuple[float, float, float] = (-10.0, 0.0, 0.0)  # pitch, yaw, roll
+    offset_x: int = 0  # Camera center offset from vehicle center (pixels, negative = shift left)
 
 
 @dataclass
@@ -174,13 +175,16 @@ class CVDetectorConfig:
 
 @dataclass
 class DLDetectorConfig:
-    """Deep Learning detector parameters."""
+    """Deep Learning detector parameters (BiSeNet V2)."""
     framework: str = "pytorch"  # 'pytorch' or 'keras'
-    model_type: str = "pretrained"  # 'pretrained', 'simple', 'full' (PyTorch only)
+    model_type: str = "pretrained"  # 'pretrained', 'binary', 'multi'
     model_path: str | None = None  # Path to custom trained weights (optional)
-    input_size: Tuple[int, int] = (256, 256)
+    input_size: Tuple[int, int] = (512, 1024)  # BiSeNet default (height, width)
     threshold: float = 0.5
-    device: str = "auto"  # 'cpu', 'cuda', 'auto' (PyTorch only)
+    device: str = "auto"  # 'cpu', 'cuda', 'auto'
+    n_classes: int = 2  # Number of segmentation classes (2 for binary lane/background)
+    smoothing_factor: float = 0.7  # Temporal smoothing factor [0, 1]
+    use_fp16: bool = True  # Use half precision (FP16) for faster inference
 
 
 @dataclass
@@ -194,11 +198,12 @@ class AnalyzerConfig:
 
 @dataclass
 class ControllerConfig:
-    """Controller parameters (PD/PID)."""
-    method: str = "pid"  # Controller type: "pd" or "pid"
-    kp: float = 0.5      # Proportional gain
+    """Controller parameters (PD/PID/Pure Pursuit)."""
+    method: str = "pid"  # Controller type: "pd", "pid", "pure_pursuit", "mpc"
+    kp: float = 0.5      # Proportional gain (or main gain for Pure Pursuit)
     ki: float = 0.01     # Integral gain (PID only)
-    kd: float = 0.1      # Derivative gain
+    kd: float = 0.1      # Derivative gain (or heading gain for Pure Pursuit)
+    lookahead_ratio: float = 0.4  # Lookahead distance as fraction of image height (Pure Pursuit only)
 
 
 @dataclass
@@ -388,6 +393,7 @@ class ConfigManager:
                     fov=cam_data.get('fov', camera_cfg.fov),
                     position=position,
                     rotation=rotation,
+                    offset_x=cam_data.get('offset_x', camera_cfg.offset_x),
                 )
 
             # Parse CV detector config
@@ -428,6 +434,8 @@ class ConfigManager:
                     input_size=input_size,
                     threshold=dl_data.get('threshold', dl_cfg.threshold),
                     device=dl_data.get('device', dl_cfg.device),
+                    n_classes=dl_data.get('n_classes', dl_cfg.n_classes),
+                    smoothing_factor=dl_data.get('smoothing_factor', dl_cfg.smoothing_factor),
                 )
 
             # Parse analyzer config
@@ -450,6 +458,7 @@ class ConfigManager:
                     kp=ctrl_data.get('kp', controller_cfg.kp),
                     ki=ctrl_data.get('ki', controller_cfg.ki),
                     kd=ctrl_data.get('kd', controller_cfg.kd),
+                    lookahead_ratio=ctrl_data.get('lookahead_ratio', controller_cfg.lookahead_ratio),
                 )
 
             # Parse throttle policy config
@@ -640,6 +649,7 @@ class ConfigManager:
                         'yaw': rotation[1],
                         'roll': rotation[2],
                     },
+                    'offset_x': config.camera.offset_x,
                 },
                 'cv_detector': {
                     'canny_low': config.cv_detector.canny_low,

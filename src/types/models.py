@@ -36,6 +36,43 @@ class Lane:
     y2: int
     confidence: float = 1.0
 
+
+@dataclass
+class LaneContour:
+    """
+    Lane contour representation for DL detection (multiple points).
+
+    Attributes:
+        points: List of [x, y] points forming the lane contour
+        class_id: Lane class ID from segmentation (1-4 for multi-class)
+        confidence: Detection confidence [0, 1]
+    """
+    points: list  # List of [x, y] points
+    class_id: int = 1
+    confidence: float = 1.0
+
+    @property
+    def num_points(self) -> int:
+        """Number of points in the contour."""
+        return len(self.points)
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for serialization."""
+        return {
+            'points': self.points,
+            'class_id': self.class_id,
+            'confidence': self.confidence
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'LaneContour':
+        """Create from dictionary."""
+        return cls(
+            points=data['points'],
+            class_id=data.get('class_id', 1),
+            confidence=data.get('confidence', 1.0)
+        )
+
     @property
     def slope(self) -> float:
         """Calculate lane slope."""
@@ -136,6 +173,7 @@ class DetectionResult:
     right_lane: Lane | None = None
     debug_image: np.ndarray | None = None
     processing_time_ms: float = 0.0
+    lanes: list | None = None  # List of LaneContour for DL multi-lane detection
 
     @property
     def has_left_lane(self) -> bool:
@@ -148,3 +186,15 @@ class DetectionResult:
     @property
     def has_both_lanes(self) -> bool:
         return self.left_lane is not None and self.right_lane is not None
+
+    @property
+    def num_lanes(self) -> int:
+        """Get number of detected lane contours."""
+        if self.lanes:
+            return len(self.lanes)
+        count = 0
+        if self.left_lane:
+            count += 1
+        if self.right_lane:
+            count += 1
+        return count

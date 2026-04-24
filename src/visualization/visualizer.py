@@ -1,11 +1,15 @@
 """
 Visualization Tools
 Provides visualization utilities for lane detection and LKAS feedback.
+
+Drawing primitives live here so they can be reused by any consumer
+(viewer, debug tools, playback scripts). All methods accept plain
+numpy arrays and plain-data parameters — no viewer state coupling.
 """
 
 import cv2
 import numpy as np
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List, Optional
 from common.types.models import Lane, LaneDepartureStatus
 
 
@@ -99,6 +103,47 @@ class LKASVisualizer:
                 self.COLOR_BLUE,
                 3,
             )
+
+        return output
+
+    def draw_segmentation(
+        self,
+        image: np.ndarray,
+        # output: np.ndarray,
+        # lanes: list,
+        segmentation_mask: np.ndarray,
+        alpha: float = 0.4,
+    ) -> np.ndarray:
+        """
+        Draw segmentation mask overlay on image.
+
+        Args:
+            image: Input image (H, W, 3) BGR or RGB
+            segmentation_mask: Segmentation mask (H, W) with class indices
+            alpha: Blend factor for overlay (0-1)
+
+        Returns:
+            Image with segmentation overlay
+        """
+        output = image.copy()
+
+        # Ensure mask matches image dimensions
+        if segmentation_mask.shape[:2] != image.shape[:2]:
+            segmentation_mask = cv2.resize(
+                segmentation_mask,
+                (image.shape[1], image.shape[0]),
+                interpolation=cv2.INTER_NEAREST
+            )
+
+        # Create colored overlay for lane pixels (class > 0)
+        overlay = np.zeros_like(output)
+        lane_pixels = segmentation_mask > 0
+
+        # Transparent blue color for lane (RGB format: blue with some green for visibility)
+        overlay[lane_pixels] = [250, 100, 50]  # Light blue in RGB
+
+        # Blend overlay with original image
+        output = cv2.addWeighted(output, 1 - alpha, overlay, alpha, 0)
 
         return output
 
@@ -376,6 +421,202 @@ class LKASVisualizer:
             return self.COLOR_RED
         else:
             return self.COLOR_WHITE
+
+    def draw_canny_edges(
+        self,
+        image: np.ndarray,
+        low_threshold: int = 50,
+        high_threshold: int = 150,
+    ) -> np.ndarray:
+        """
+        Produce a Canny edge visualization (white edges on black background).
+
+        Args:
+            image: Input RGB image
+            low_threshold: Canny low threshold
+            high_threshold: Canny high threshold
+
+        Returns:
+            RGB image with white edges on black
+        """
+        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        edges = cv2.Canny(blur, low_threshold, high_threshold)
+        return cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
+
+    def draw_hough_lines(
+        self,
+        image: np.ndarray,
+        roi_config: Dict[str, float],
+        canny_low: int = 50,
+        canny_high: int = 150,
+        hough_rho: int = 2,
+        hough_theta: float = 0.017453,
+        hough_threshold: int = 50,
+        min_line_len: int = 40,
+        max_line_gap: int = 100,
+    ) -> np.ndarray:
+        """
+        Produce a Hough lines visualization (magenta lines on black background).
+
+        Applies Canny + ROI masking + HoughLinesP, then draws the resulting
+        line segments.
+
+        Args:
+            image: Input RGB image
+            roi_config: ROI trapezoid fractions
+                (roi_bottom_left_x, roi_top_left_x, roi_top_right_x,
+                 roi_bottom_right_x, roi_top_y)
+            canny_low: Canny low threshold
+            canny_high: Canny high threshold
+            hough_rho: Accumulator distance resolution (pixels)
+            hough_theta: Accumulator angle resolution (radians)
+            hough_threshold: Voting threshold
+            min_line_len: Minimum line length (pixels)
+            max_line_gap: Maximum gap between segments (pixels)
+
+        Returns:
+            RGB image with magenta lines on black
+        """
+        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        edges = cv2.Canny(blur, canny_low, canny_high)
+
+        height, width = edges.shape
+        mask = np.zeros_like(edges)
+        vertices = np.array([[
+            [int(width * roi_config['roi_bottom_left_x']), height],
+            [int(width * roi_config['roi_top_left_x']), int(height * roi_config['roi_top_y'])],
+            [int(width * roi_config['roi_top_right_x']), int(height * roi_config['roi_top_y'])],
+            [int(width * roi_config['roi_bottom_right_x']), height],
+        ]], dtype=np.int32)
+        cv2.fillPoly(mask, vertices, 255)
+        masked_edges = cv2.bitwise_and(edges, mask)
+
+        lines = cv2.HoughLinesP(
+            masked_edges, hough_rho, hough_theta, hough_threshold,
+            minLineLength=min_line_len, maxLineGap=max_line_gap,
+        )
+
+        output = np.zeros_like(image)
+        if lines is not None:
+            for line in lines:
+                x1, y1, x2, y2 = line[0]
+                cv2.line(output, (x1, y1), (x2, y2), (255, 0, 255), 2)
+
+        return output
+
+    def draw_roi(
+        self,
+        image: np.ndarray,
+        roi_config: Dict[str, float],
+    ) -> np.ndarray:
+        """
+        Draw the ROI trapezoid outline (green) used by CV detection.
+
+        Args:
+            image: Input image (modified in-place)
+            roi_config: ROI trapezoid fractions
+
+        Returns:
+            Same image with ROI polyline drawn
+        """
+        height, width = image.shape[:2]
+        vertices = np.array([[
+            [int(width * roi_config['roi_bottom_left_x']), height],
+            [int(width * roi_config['roi_top_left_x']), int(height * roi_config['roi_top_y'])],
+            [int(width * roi_config['roi_top_right_x']), int(height * roi_config['roi_top_y'])],
+            [int(width * roi_config['roi_bottom_right_x']), height],
+        ]], dtype=np.int32)
+        cv2.polylines(image, vertices, True, self.COLOR_GREEN, 2)
+        return image
+
+    def draw_polynomials(
+        self,
+        image: np.ndarray,
+        left_poly: Optional[List[float]] = None,
+        right_poly: Optional[List[float]] = None,
+        center_poly: Optional[List[float]] = None,
+        left_confidence: float = 0.0,
+        right_confidence: float = 0.0,
+        camera_offset_x: int = 0,
+    ) -> np.ndarray:
+        """
+        Draw polynomial lane boundary curves and center path.
+
+        Each polynomial is ``x = a*y^2 + b*y + c`` where coefficients are
+        ``[a, b, c]``.
+
+        Colors: left = blue-ish, right = red-ish, center = yellow/cyan.
+
+        Args:
+            image: Input image (modified in-place)
+            left_poly: Left boundary coefficients [a, b, c] or None
+            right_poly: Right boundary coefficients [a, b, c] or None
+            center_poly: Center path coefficients [a, b, c] or None
+            left_confidence: Confidence score [0, 1] for left boundary
+            right_confidence: Confidence score [0, 1] for right boundary
+            camera_offset_x: Camera offset from vehicle center (pixels)
+
+        Returns:
+            Same image with polynomial curves drawn
+        """
+        height, width = image.shape[:2]
+        y_end = int(height * 0.4)
+        y_values = np.arange(height - 1, y_end, -2)
+
+        def _eval(coeffs, y_vals):
+            a, b, c = coeffs
+            return a * y_vals ** 2 + b * y_vals + c
+
+        def _draw_curve(coeffs, color, thickness=2):
+            x_vals = _eval(coeffs, y_values.astype(np.float64))
+            valid = (x_vals >= 0) & (x_vals < width)
+            if not np.any(valid):
+                return
+            pts = np.column_stack([
+                x_vals[valid].astype(np.int32),
+                y_values[valid].astype(np.int32),
+            ])
+            if len(pts) >= 2:
+                cv2.polylines(image, [pts], isClosed=False,
+                              color=color, thickness=thickness)
+
+        # Left boundary
+        if left_poly:
+            _draw_curve(left_poly, color=(255, 100, 100), thickness=2)
+        if left_confidence > 0:
+            lx = int(_eval(left_poly, float(y_end + 20))) if left_poly else 40
+            lx = max(5, min(width - 80, lx))
+            cv2.putText(image, f"L:{left_confidence:.2f}", (lx, y_end + 15),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 100, 100), 1)
+
+        # Right boundary
+        if right_poly:
+            _draw_curve(right_poly, color=(100, 100, 255), thickness=2)
+        if right_confidence > 0:
+            rx = int(_eval(right_poly, float(y_end + 20))) if right_poly else width - 80
+            rx = max(5, min(width - 80, rx))
+            cv2.putText(image, f"R:{right_confidence:.2f}", (rx, y_end + 15),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (100, 100, 255), 1)
+
+        # Center path
+        if center_poly:
+            _draw_curve(center_poly, color=(0, 255, 255), thickness=3)
+
+            # Lookahead marker
+            lookahead_y = int(height * 0.6)
+            lookahead_x = _eval(center_poly, float(lookahead_y))
+            if 0 <= lookahead_x < width:
+                cv2.circle(image, (int(lookahead_x), lookahead_y),
+                           6, (0, 255, 255), -1)
+
+            # Vehicle center reference line
+            cx = width // 2 + camera_offset_x
+            cv2.line(image, (cx, height - 1), (cx, y_end),
+                     self.COLOR_WHITE, 1)
+
+        return image
 
     def create_alert_overlay(
         self,

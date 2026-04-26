@@ -83,7 +83,7 @@ class VehicleState:
 class ParameterUpdate:
     """Parameter update message for real-time tuning."""
     category: str  # 'detection', 'decision', or 'vehicle'
-    parameter: str  # Parameter name (e.g., 'canny_low', 'kp', 'throttle')
+    parameter: str  # Parameter name (e.g., 'kp', 'lookahead_ratio', 'throttle')
     value: float    # New parameter value
     timestamp: float = 0.0
 

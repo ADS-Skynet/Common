@@ -53,32 +53,6 @@ camera:
     roll: 0.0
   offset_x: -75  # Camera center offset from vehicle center (pixels, negative = shift reference left)
 
-# Computer Vision Detector
-cv_detector:
-  # Canny edge detection
-  canny_low: 140
-  canny_high: 200
-
-  # Hough transform
-  hough_rho: 2
-  hough_theta: 0.017453  # 1 degree in radians (pi/180)
-  hough_threshold: 50
-  hough_min_line_len: 40
-  hough_max_line_gap: 100
-
-  # Temporal smoothing
-  smoothing_factor: 0.7
-
-  # Lane detection thresholds
-  min_slope: 0.5  # Minimum absolute slope to be considered a lane
-
-  # ROI configuration (broader detection area)
-  roi_bottom_left_x: 0.10   # Fraction of width (bottom-left corner)
-  roi_top_left_x: 0.40      # Fraction of width (top-left corner)
-  roi_top_right_x: 0.70     # Fraction of width (top-right corner)
-  roi_bottom_right_x: 1.00  # Fraction of width (bottom-right corner)
-  roi_top_y: 0.5            # Fraction of height (look at top 50% of image)
-
 # Deep Learning Detector (BiSeNet V2)
 dl_detector:
   framework: "pytorch"  # 'pytorch' or 'keras'
@@ -100,11 +74,10 @@ lane_analyzer:
 
 # Controller Configuration
 controller:
-  method: "pure_pursuit"  # Controller type: "pd", "pid", "pure_pursuit", "mpc"
-  kp: 0.8        # Proportional gain (or main gain for Pure Pursuit)
-  ki: 0.01       # Integral gain (PID only)
-  kd: 0.1        # Derivative gain (or heading gain for Pure Pursuit)
-  lookahead_ratio: 0.2  # Lookahead distance as fraction of image height (Pure Pursuit only)
+  method: "pure_pursuit"
+  kp: 0.8        # Main steering gain
+  kd: 0.1        # Heading angle correction gain
+  lookahead_ratio: 0.2  # Lookahead distance as fraction of image height
 
 # Throttle Control Policy
 # Adaptive throttle reduces speed during sharp turns
@@ -180,4 +153,4 @@ control_limits:
 
 # System Settings
 system:
-  detection_method: "dl"  # "cv" or "dl"
+  detection_method: "dl"

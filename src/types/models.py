@@ -4,7 +4,6 @@ Uses dataclasses for type safety and clean data structures.
 """
 
 from dataclasses import dataclass, field
-from typing import Tuple
 from enum import Enum
 import numpy as np
 
@@ -73,30 +72,6 @@ class LaneContour:
             confidence=data.get('confidence', 1.0)
         )
 
-    @property
-    def slope(self) -> float:
-        """Calculate lane slope."""
-        if self.x2 - self.x1 == 0:
-            return float('inf')
-        return (self.y2 - self.y1) / (self.x2 - self.x1)
-
-    @property
-    def length(self) -> float:
-        """Calculate lane line length."""
-        return np.sqrt((self.x2 - self.x1)**2 + (self.y2 - self.y1)**2)
-
-    def as_tuple(self) -> Tuple[int, int, int, int]:
-        """Convert to tuple format (x1, y1, x2, y2)."""
-        return (self.x1, self.y1, self.x2, self.y2)
-
-    @classmethod
-    def from_tuple(cls, coords: Tuple[int, int, int, int], confidence: float = 1.0) -> 'Lane':
-        """Create Lane from tuple (x1, y1, x2, y2)."""
-        return cls(x1=coords[0], y1=coords[1], x2=coords[2], y2=coords[3], confidence=confidence)
-
-    def __bool__(self) -> bool:
-        """Lane is truthy if it exists."""
-        return True
 
 
 @dataclass

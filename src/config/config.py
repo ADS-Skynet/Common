@@ -153,27 +153,6 @@ class CameraConfig:
 
 
 @dataclass
-class CVDetectorConfig:
-    """Computer Vision detector parameters."""
-    canny_low: int = 50
-    canny_high: int = 150
-    hough_rho: int = 2
-    hough_theta: float = 0.017453  # pi/180
-    hough_threshold: int = 50
-    hough_min_line_len: int = 40
-    hough_max_line_gap: int = 100
-    smoothing_factor: float = 0.7
-    min_slope: float = 0.5
-
-    # ROI configuration (broader detection area)
-    roi_bottom_left_x: float = 0.05  # fraction of width (bottom-left corner)
-    roi_top_left_x: float = 0.35     # fraction of width (top-left corner) - wider than before
-    roi_top_right_x: float = 0.65    # fraction of width (top-right corner) - wider than before
-    roi_bottom_right_x: float = 0.95 # fraction of width (bottom-right corner)
-    roi_top_y: float = 0.5           # fraction of height (look at top 50% of image)
-
-
-@dataclass
 class DLDetectorConfig:
     """Deep Learning detector parameters (BiSeNet V2)."""
     framework: str = "pytorch"  # 'pytorch' or 'keras'
@@ -198,12 +177,12 @@ class AnalyzerConfig:
 
 @dataclass
 class ControllerConfig:
-    """Controller parameters (PD/PID/Pure Pursuit)."""
-    method: str = "pid"  # Controller type: "pd", "pid", "pure_pursuit", "mpc"
-    kp: float = 0.5      # Proportional gain (or main gain for Pure Pursuit)
-    ki: float = 0.01     # Integral gain (PID only)
-    kd: float = 0.1      # Derivative gain (or heading gain for Pure Pursuit)
-    lookahead_ratio: float = 0.4  # Lookahead distance as fraction of image height (Pure Pursuit only)
+    """Controller parameters for Pure Pursuit."""
+    method: str = "pure_pursuit"
+    kp: float = 0.8      # Main steering gain
+    ki: float = 0.0      # Unused, kept for config file compatibility
+    kd: float = 0.15     # Heading angle correction gain
+    lookahead_ratio: float = 0.4  # Lookahead distance as fraction of image height
 
 
 @dataclass
@@ -249,7 +228,6 @@ class Config:
     communication: CommunicationConfig = field(default_factory=CommunicationConfig)
     carla: CARLAConfig = field(default_factory=CARLAConfig)
     camera: CameraConfig = field(default_factory=CameraConfig)
-    cv_detector: CVDetectorConfig = field(default_factory=CVDetectorConfig)
     dl_detector: DLDetectorConfig = field(default_factory=DLDetectorConfig)
     analyzer: AnalyzerConfig = field(default_factory=AnalyzerConfig)
     controller: ControllerConfig = field(default_factory=ControllerConfig)
@@ -262,7 +240,7 @@ class Config:
     control_limits: ControlLimitsConfig = field(default_factory=ControlLimitsConfig)
 
     # General settings
-    detection_method: str = "cv"  # 'cv' or 'dl'
+    detection_method: str = "dl"
 
 
 class ConfigManager:
@@ -394,27 +372,6 @@ class ConfigManager:
                     position=position,
                     rotation=rotation,
                     offset_x=cam_data.get('offset_x', camera_cfg.offset_x),
-                )
-
-            # Parse CV detector config
-            cv_cfg = CVDetectorConfig()
-            if 'cv_detector' in data:
-                cv_data = data['cv_detector']
-                cv_cfg = CVDetectorConfig(
-                    canny_low=cv_data.get('canny_low', cv_cfg.canny_low),
-                    canny_high=cv_data.get('canny_high', cv_cfg.canny_high),
-                    hough_rho=cv_data.get('hough_rho', cv_cfg.hough_rho),
-                    hough_theta=cv_data.get('hough_theta', cv_cfg.hough_theta),
-                    hough_threshold=cv_data.get('hough_threshold', cv_cfg.hough_threshold),
-                    hough_min_line_len=cv_data.get('hough_min_line_len', cv_cfg.hough_min_line_len),
-                    hough_max_line_gap=cv_data.get('hough_max_line_gap', cv_cfg.hough_max_line_gap),
-                    smoothing_factor=cv_data.get('smoothing_factor', cv_cfg.smoothing_factor),
-                    min_slope=cv_data.get('min_slope', cv_cfg.min_slope),
-                    roi_bottom_left_x=cv_data.get('roi_bottom_left_x', cv_cfg.roi_bottom_left_x),
-                    roi_top_left_x=cv_data.get('roi_top_left_x', cv_cfg.roi_top_left_x),
-                    roi_top_right_x=cv_data.get('roi_top_right_x', cv_cfg.roi_top_right_x),
-                    roi_bottom_right_x=cv_data.get('roi_bottom_right_x', cv_cfg.roi_bottom_right_x),
-                    roi_top_y=cv_data.get('roi_top_y', cv_cfg.roi_top_y),
                 )
 
             # Parse DL detector config
@@ -561,16 +518,15 @@ class ConfigManager:
                 )
 
             # Parse detection method from system section
-            detection_method = "cv"
+            detection_method = "dl"
             if 'system' in data:
-                detection_method = data['system'].get('detection_method', 'cv')
+                detection_method = data['system'].get('detection_method', 'dl')
 
             # Create config object
             config = Config(
                 communication=comm_cfg,
                 carla=carla_cfg,
                 camera=camera_cfg,
-                cv_detector=cv_cfg,
                 dl_detector=dl_cfg,
                 analyzer=analyzer_cfg,
                 controller=controller_cfg,
@@ -650,22 +606,6 @@ class ConfigManager:
                         'roll': rotation[2],
                     },
                     'offset_x': config.camera.offset_x,
-                },
-                'cv_detector': {
-                    'canny_low': config.cv_detector.canny_low,
-                    'canny_high': config.cv_detector.canny_high,
-                    'hough_rho': config.cv_detector.hough_rho,
-                    'hough_theta': config.cv_detector.hough_theta,
-                    'hough_threshold': config.cv_detector.hough_threshold,
-                    'hough_min_line_len': config.cv_detector.hough_min_line_len,
-                    'hough_max_line_gap': config.cv_detector.hough_max_line_gap,
-                    'smoothing_factor': config.cv_detector.smoothing_factor,
-                    'min_slope': config.cv_detector.min_slope,
-                    'roi_bottom_left_x': config.cv_detector.roi_bottom_left_x,
-                    'roi_top_left_x': config.cv_detector.roi_top_left_x,
-                    'roi_top_right_x': config.cv_detector.roi_top_right_x,
-                    'roi_bottom_right_x': config.cv_detector.roi_bottom_right_x,
-                    'roi_top_y': config.cv_detector.roi_top_y,
                 },
                 'dl_detector': {
                     'model_type': config.dl_detector.model_type,
